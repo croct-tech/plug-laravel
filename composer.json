@@ -1,67 +1,91 @@
 {
-  "name": "croct/project-php",
-  "description": "A brief description about the project.",
-  "license": "proprietary",
-  "type": "library",
-  "keywords": [
-    "croct",
-    "related",
-    "keyword"
-  ],
-  "authors": [
-    {
-      "name": "Croct",
-      "email": "lib+project-php@croct.com",
-      "homepage": "https://croct.com"
+    "name": "croct/plug-laravel",
+    "description": "Laravel package to plug your Laravel applications into Croct.",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "croct",
+        "personalization",
+        "laravel",
+        "package",
+        "php"
+    ],
+    "authors": [
+        {
+            "name": "Croct",
+            "email": "lib+plug-laravel@croct.com",
+            "homepage": "https://croct.com"
+        }
+    ],
+    "homepage": "https://github.com/croct-tech/plug-laravel",
+    "support": {
+        "issues": "https://github.com/croct-tech/plug-laravel/issues",
+        "source": "https://github.com/croct-tech/plug-laravel"
+    },
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "croct/plug-php": "dev-initial-version as 1.0.0",
+        "illuminate/contracts": "^10.0 || ^11.0",
+        "illuminate/cookie": "^10.0 || ^11.0",
+        "illuminate/http": "^10.0 || ^11.0",
+        "illuminate/routing": "^10.0 || ^11.0",
+        "illuminate/support": "^10.0 || ^11.0",
+        "symfony/http-foundation": "^6.4 || ^7.0"
+    },
+    "require-dev": {
+        "croct/coding-standard": "^0.4.5",
+        "ergebnis/composer-normalize": "^2.28",
+        "larastan/larastan": "^3.0",
+        "orchestra/testbench": "^9.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.2",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "squizlabs/php_codesniffer": "^4.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../plug-php"
+        }
+    ],
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Croct\\Plug\\Laravel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Croct\\Plug\\Laravel\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "ergebnis/composer-normalize": true,
+            "php-http/discovery": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Croct\\Plug\\Laravel\\CroctServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": [
+            "composer validate",
+            "composer normalize --dry-run",
+            "mkdir -p .cache",
+            "phpcs",
+            "phpstan analyse --memory-limit=512M",
+            "phpunit"
+        ]
     }
-  ],
-  "homepage": "https://github.com/croct-tech/project-php",
-  "require": {
-    "php": "^8.0"
-  },
-  "require-dev": {
-    "croct/coding-standard": "^0.4",
-    "ergebnis/composer-normalize": "^2.28",
-    "phpstan/phpstan": "^1.8",
-    "phpstan/phpstan-deprecation-rules": "^1.0",
-    "phpstan/phpstan-phpunit": "^1.1",
-    "phpstan/phpstan-strict-rules": "^1.4",
-    "phpunit/phpunit": "^10.0",
-    "squizlabs/php_codesniffer": "^3.7"
-  },
-  "repositories": [
-    {
-      "type": "composer",
-      "url": "https://croct.repo.repman.io",
-      "secure-http": true
-    }
-  ],
-  "prefer-stable": true,
-  "autoload": {
-    "psr-4": {
-      "Croct\\Project\\": "src/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Croct\\Project\\Tests\\": "tests/"
-    }
-  },
-  "config": {
-    "allow-plugins": {
-      "dealerdirect/phpcodesniffer-composer-installer": true,
-      "ergebnis/composer-normalize": true,
-      "phpstan/extension-installer": false
-    }
-  },
-  "scripts": {
-    "test": [
-      "composer validate",
-      "composer normalize --dry-run",
-      "mkdir -p .cache",
-      "phpcs",
-      "phpstan analyse",
-      "phpunit"
-    ]
-  }
 }
