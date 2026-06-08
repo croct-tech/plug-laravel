@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Croct\Plug\Laravel\Tests;
 
+use Croct\Plug\CroctScriptProvider;
 use Croct\Plug\IdentityResolver;
 use Croct\Plug\Laravel\CroctManager;
 use Croct\Plug\Laravel\CroctServiceProvider;
@@ -62,6 +63,30 @@ final class CroctServiceProviderTest extends TestCase
         self::assertContains('ct.user_token', $except);
     }
 
+    #[TestDox('Binds the first-party script provider.')]
+    public function testBindsScriptProvider(): void
+    {
+        self::assertInstanceOf(CroctScriptProvider::class, $this->app->make(CroctScriptProvider::class));
+    }
+
+    #[TestDox('Registers the first-party script route.')]
+    public function testRegistersFirstPartyRoute(): void
+    {
+        $uris = \array_map(
+            static fn ($route): string => $route->uri(),
+            $this->app->make(Router::class)->getRoutes()->getRoutes(),
+        );
+
+        self::assertContains('_croct/plug.js', $uris);
+    }
+
+    #[TestDox('Injects the first-party path as the script source.')]
+    public function testInjectsFirstPartyPath(): void
+    {
+        $this->get('/croct-test-page')
+            ->assertSee('src="/_croct/plug.js"', false);
+    }
+
     /**
      * @return array<int, class-string>
      */
@@ -77,5 +102,14 @@ final class CroctServiceProviderTest extends TestCase
         $config->set('croct.app_id', null);
         $config->set('croct.api_key', 'app-key');
         $config->set('croct.cookie.domain', 'example.com');
+    }
+
+    /**
+     * @param Router $router
+     */
+    protected function defineRoutes(mixed $router): void
+    {
+        $router->get('/croct-test-page', static fn (): string => '<html><head></head></html>')
+            ->middleware(CroctMiddleware::class);
     }
 }

@@ -13,6 +13,7 @@ parameters:
             - JsonException
             - Symfony\Component\HttpFoundation\Exception\BadRequestException
             - Illuminate\Contracts\Container\BindingResolutionException
+            - Psr\SimpleCache\InvalidArgumentException
         check:
             missingCheckedExceptionInThrows: true
             tooWideThrowType: true

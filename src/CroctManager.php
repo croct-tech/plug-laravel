@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Croct\Plug\Laravel;
 
+use Croct\Plug\Content\ContentProvider;
 use Croct\Plug\Cookie;
 use Croct\Plug\CookieConfiguration;
 use Croct\Plug\CookieStorage;
@@ -12,22 +13,19 @@ use Croct\Plug\IdentityResolver;
 use Croct\Plug\LocaleResolver;
 use Croct\Plug\Plug;
 use Croct\Plug\RequestContext;
-use Croct\Plug\Token;
 use Croct\Plug\VaryingResponseObserver;
 use Illuminate\Http\Request;
+use Psr\Log\LoggerInterface as Logger;
 
 /**
- * Builds a request-scoped {@see Plug} from the current Laravel request.
+ * Builds and manages the request-scoped plug for the current Laravel request.
  *
- * It mirrors the role of the Symfony factory: it reads the visitor cookies, builds the Plug with the
- * request context and resolved locale, and tracks whether the request used visitor-specific data so
- * the middleware can mark the response private.
+ * Besides creating the plug, it reconciles the visitor identity with the authenticated user and
+ * exposes the session cookies and the client-side bootstrap options for the response.
  */
 final class CroctManager
 {
     private Request $request;
-
-    private IdentityResolver $identity;
 
     private LocaleResolver $locale;
 
@@ -47,6 +45,14 @@ final class CroctManager
 
     private string $cookieSameSite;
 
+    private ?ContentProvider $contentProvider;
+
+    private ?Logger $logger;
+
+    private int $tokenDuration;
+
+    private ?IdentityResolver $identity;
+
     private ?Plug $plug = null;
 
     private ?CookieStorage $storage = null;
@@ -55,7 +61,6 @@ final class CroctManager
 
     public function __construct(
         Request $request,
-        IdentityResolver $identity,
         LocaleResolver $locale,
         string $appId,
         string $apiKey,
@@ -65,9 +70,12 @@ final class CroctManager
         ?string $cookieDomain = null,
         bool $cookieSecure = true,
         string $cookieSameSite = 'none',
+        ?ContentProvider $contentProvider = null,
+        ?Logger $logger = null,
+        int $tokenDuration = Croct::DEFAULT_TOKEN_DURATION,
+        ?IdentityResolver $identity = null,
     ) {
         $this->request = $request;
-        $this->identity = $identity;
         $this->locale = $locale;
         $this->appId = $appId;
         $this->apiKey = $apiKey;
@@ -77,6 +85,10 @@ final class CroctManager
         $this->cookieDomain = $cookieDomain;
         $this->cookieSecure = $cookieSecure;
         $this->cookieSameSite = $cookieSameSite;
+        $this->contentProvider = $contentProvider;
+        $this->logger = $logger;
+        $this->tokenDuration = $tokenDuration;
+        $this->identity = $identity;
     }
 
     public function getPlug(): Plug
@@ -98,6 +110,38 @@ final class CroctManager
     }
 
     /**
+     * Reconciles the visitor token with the authenticated user.
+     *
+     * When the logged-in user no longer matches the cookie token, the visitor is re-identified
+     * through the session. That flags the request as varying, so the new cookie is written and
+     * the response goes private. A matching or anonymous visitor is left untouched, keeping the
+     * response shared-cacheable, the same way plug-next and plug-nuxt reconcile.
+     */
+    public function reconcile(): void
+    {
+        if ($this->identity === null) {
+            return;
+        }
+
+        $stored = $this->getStorage()->getUserToken();
+        $userId = $this->identity->getUserId();
+
+        $matches = $userId === null
+            ? ($stored?->isAnonymous() ?? true)
+            : ($stored?->isSubject($userId) ?? false);
+
+        if ($matches) {
+            return;
+        }
+
+        if ($userId === null) {
+            $this->getPlug()->anonymize();
+        } else {
+            $this->getPlug()->identify($userId);
+        }
+    }
+
+    /**
      * Returns the visitor-independent options for bootstrapping the client-side SDK.
      *
      * @return array<string, mixed>
@@ -109,34 +153,6 @@ final class CroctManager
             'disableCidMirroring' => true,
             'cookie' => $this->createCookieConfiguration()->toBrowserCookies(),
         ];
-    }
-
-    /**
-     * Keeps the visitor token in sync with the authenticated user, re-identifying on login and
-     * anonymizing on logout, only when the user no longer matches the stored token.
-     */
-    public function syncIdentity(): void
-    {
-        $userId = $this->identity->getUserId();
-        $token = $this->getStorage()->getUserToken();
-
-        $matches = $userId === null
-            ? ($token?->isAnonymous() ?? true)
-            : ($token?->isSubject($userId) ?? false);
-
-        if ($matches) {
-            return;
-        }
-
-        $plug = $this->getPlug();
-
-        if ($userId === null) {
-            $plug->anonymize();
-
-            return;
-        }
-
-        $plug->identify($userId);
     }
 
     private function getStorage(): CookieStorage
@@ -159,6 +175,7 @@ final class CroctManager
     private function createPlug(): Plug
     {
         $context = new RequestContext(
+            previewToken: RequestContext::resolvePreviewToken(self::getPreviewToken($this->request)),
             url: $this->request->getUri(),
             referrer: $this->request->headers->get('referer'),
             clientAgent: $this->request->headers->get('User-Agent'),
@@ -170,13 +187,24 @@ final class CroctManager
             appId: $this->appId,
             apiKey: $this->apiKey,
             storage: $this->getStorage(),
+            identity: $this->identity,
             baseEndpointUrl: $this->baseEndpointUrl,
+            tokenDuration: $this->tokenDuration,
+            contentProvider: $this->contentProvider,
             context: $context,
+            logger: $this->logger,
         );
 
         return new VaryingResponseObserver($croct, function (): void {
             $this->personalized = true;
         });
+    }
+
+    private static function getPreviewToken(Request $request): ?string
+    {
+        $value = $request->query->getString(RequestContext::PREVIEW_QUERY_PARAMETER);
+
+        return $value !== '' ? $value : null;
     }
 
     private function resolveLocale(?string $detected): ?string
@@ -186,10 +214,5 @@ final class CroctManager
         }
 
         return $this->defaultLocale ?? $detected;
-    }
-
-    public function getStoredUserToken(): ?Token
-    {
-        return $this->getStorage()->getUserToken();
     }
 }

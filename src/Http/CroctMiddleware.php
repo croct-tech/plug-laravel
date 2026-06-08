@@ -17,9 +17,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Injects the client-side SDK bootstrap and writes the visitor session to the response.
  *
- * It runs on every web request: it keeps the visitor identity in sync before the controller, then
- * injects the bootstrap into HTML responses and, when the request used visitor-specific data, writes
- * the session cookies and marks the response private so it is never shared-cached.
+ * It runs on every web request: it injects the bootstrap into HTML responses and, when the
+ * request used visitor-specific data or re-identified the visitor, writes the session cookies
+ * and marks the response private so it is never shared-cached.
  */
 final class CroctMiddleware
 {
@@ -31,8 +31,12 @@ final class CroctMiddleware
 
     private string $placement;
 
-    public function __construct(CroctManager $manager, bool $autoInject, string $scriptSrc, string $placement)
-    {
+    public function __construct(
+        CroctManager $manager,
+        bool $autoInject,
+        string $scriptSrc,
+        string $placement,
+    ) {
         $this->manager = $manager;
         $this->autoInject = $autoInject;
         $this->scriptSrc = $scriptSrc;
@@ -44,20 +48,23 @@ final class CroctMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $this->manager->syncIdentity();
-
         $response = $next($request);
 
         if ($this->autoInject) {
             $this->injectScript($request, $response);
         }
 
+        // Eagerly reconcile the visitor identity: when the logged-in user diverged from the
+        // cookie token, this re-identifies and flags the request personalized, so the cookies
+        // are written and the response goes private below, like a content fetch.
+        $this->manager->reconcile();
+
         if ($this->manager->isPersonalized()) {
             foreach ($this->manager->getResponseCookies() as $cookie) {
                 $response->headers->setCookie(self::createCookie($cookie));
             }
 
-            // The response depends on the visitor (content and/or session cookies): never shared-cache it.
+            // The response depends on the visitor (content or cookies): never shared-cache it.
             $response->setPrivate();
         }
 

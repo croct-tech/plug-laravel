@@ -6,6 +6,8 @@ return [
     'app_id' => env('CROCT_APP_ID'),
     'api_key' => env('CROCT_API_KEY'),
     'base_endpoint_url' => env('CROCT_BASE_ENDPOINT_URL'),
+    // Lifetime in seconds of the issued visitor tokens.
+    'token_duration' => (int) env('CROCT_TOKEN_DURATION', \Croct\Plug\Croct::DEFAULT_TOKEN_DURATION),
     'locale' => [
         // Detects the visitor locale from the application locale.
         'enabled' => true,
@@ -21,6 +23,8 @@ return [
         // Injects the client-side SDK bootstrap into HTML responses.
         'auto_inject' => true,
         'placement' => 'head',
-        'loader_url' => 'https://cdn.croct.io/js/v1/lib/plug.js',
+        // First-party path that serves the SDK. Set to null to inject the CDN script URL instead.
+        'path' => '/_croct/plug.js',
+        'script_url' => \Croct\Plug\CroctScript::DEFAULT_SCRIPT_URL,
     ],
 ];

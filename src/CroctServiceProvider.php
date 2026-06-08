@@ -4,16 +4,24 @@ declare(strict_types=1);
 
 namespace Croct\Plug\Laravel;
 
+use Croct\Plug\Content\ContentProvider;
+use Croct\Plug\Croct;
+use Croct\Plug\CroctScriptProvider;
 use Croct\Plug\IdentityResolver;
 use Croct\Plug\Laravel\Http\CroctMiddleware;
+use Croct\Plug\Laravel\Http\CroctScriptController;
 use Croct\Plug\LocaleResolver;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\HttpFactory;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Psr\Log\LoggerInterface;
 
 /**
  * Wires Croct into Laravel with zero application code.
@@ -45,7 +53,6 @@ final class CroctServiceProvider extends ServiceProvider
 
             return new CroctManager(
                 $app->make(Request::class),
-                $app->make(IdentityResolver::class),
                 $app->make(LocaleResolver::class),
                 self::getString($config->get('croct.app_id')),
                 self::getString($config->get('croct.api_key')),
@@ -55,6 +62,22 @@ final class CroctServiceProvider extends ServiceProvider
                 self::getOptionalString($config->get('croct.cookie.domain')),
                 (bool) $config->get('croct.cookie.secure'),
                 self::getString($config->get('croct.cookie.same_site')),
+                $app->bound(ContentProvider::class) ? $app->make(ContentProvider::class) : null,
+                $app->make(LoggerInterface::class),
+                self::getInt($config->get('croct.token_duration'), Croct::DEFAULT_TOKEN_DURATION),
+                $app->make(IdentityResolver::class),
+            );
+        });
+
+        $this->app->bind(CroctScriptProvider::class, static function (Application $app): CroctScriptProvider {
+            $config = $app->make(Config::class);
+
+            return new CroctScriptProvider(
+                // Disable transparent decompression so the upstream content encoding is relayed as-is.
+                new Client(['decode_content' => false]),
+                new HttpFactory(),
+                $app->make(Cache::class),
+                self::getString($config->get('croct.script.script_url')),
             );
         });
 
@@ -64,7 +87,7 @@ final class CroctServiceProvider extends ServiceProvider
             return new CroctMiddleware(
                 $app->make(CroctManager::class),
                 (bool) $config->get('croct.script.auto_inject'),
-                self::getString($config->get('croct.script.loader_url')),
+                self::resolveScriptSrc($config),
                 self::getString($config->get('croct.script.placement')),
             );
         });
@@ -80,7 +103,22 @@ final class CroctServiceProvider extends ServiceProvider
         // The client SDK reads these cookies, so Laravel must never encrypt them.
         EncryptCookies::except(['ct.client_id', 'ct.user_token']);
 
-        $this->app->make(Router::class)->pushMiddlewareToGroup('web', CroctMiddleware::class);
+        $router = $this->app->make(Router::class);
+        $router->pushMiddlewareToGroup('web', CroctMiddleware::class);
+
+        // Serve the SDK first-party so the browser loads it from the application's own origin.
+        $path = self::getOptionalString($this->app->make(Config::class)->get('croct.script.path'));
+
+        if ($path !== null) {
+            $router->get($path, CroctScriptController::class);
+        }
+    }
+
+    private static function resolveScriptSrc(Config $config): string
+    {
+        $path = self::getOptionalString($config->get('croct.script.path'));
+
+        return $path ?? self::getString($config->get('croct.script.script_url'));
     }
 
     private static function getString(mixed $value): string
@@ -91,5 +129,10 @@ final class CroctServiceProvider extends ServiceProvider
     private static function getOptionalString(mixed $value): ?string
     {
         return \is_string($value) ? $value : null;
+    }
+
+    private static function getInt(mixed $value, int $default): int
+    {
+        return \is_numeric($value) ? (int) $value : $default;
     }
 }
