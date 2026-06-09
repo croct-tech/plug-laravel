@@ -11,6 +11,7 @@ use Croct\Plug\IdentityResolver;
 use Croct\Plug\Laravel\Http\CroctMiddleware;
 use Croct\Plug\Laravel\Http\CroctScriptController;
 use Croct\Plug\LocaleResolver;
+use Croct\Plug\Plug;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\HttpFactory;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
@@ -68,6 +69,11 @@ final class CroctServiceProvider extends ServiceProvider
                 $app->make(IdentityResolver::class),
             );
         });
+
+        $this->app->bind(
+            Plug::class,
+            static fn (Application $app): Plug => $app->make(CroctManager::class)->getPlug(),
+        );
 
         $this->app->bind(CroctScriptProvider::class, static function (Application $app): CroctScriptProvider {
             $config = $app->make(Config::class);

@@ -12,6 +12,7 @@ use Croct\Plug\Laravel\Http\CroctMiddleware;
 use Croct\Plug\Laravel\LaravelIdentityResolver;
 use Croct\Plug\Laravel\LaravelLocaleResolver;
 use Croct\Plug\LocaleResolver;
+use Croct\Plug\Plug;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Routing\Router;
 use Orchestra\Testbench\TestCase;
@@ -35,6 +36,21 @@ final class CroctServiceProviderTest extends TestCase
     {
         self::assertInstanceOf(CroctManager::class, $this->app->make(CroctManager::class));
         self::assertInstanceOf(CroctMiddleware::class, $this->app->make(CroctMiddleware::class));
+    }
+
+    #[TestDox('Resolves the Plug instance from the request-scoped manager.')]
+    public function testBindsPlug(): void
+    {
+        // Building a Plug requires valid credentials, unlike the empty-string fallback the other cases rely on.
+        $config = $this->app->make('config');
+        $config->set('croct.app_id', '7e9d59a9-e4b3-45d4-b1c7-48287f1e5e8a');
+        $config->set('croct.api_key', '11111111-2222-4333-8444-555555555555');
+
+        $plug = $this->app->make(Plug::class);
+
+        self::assertInstanceOf(Plug::class, $plug);
+        // The binding must defer to the scoped manager rather than build a separate Plug.
+        self::assertSame($this->app->make(CroctManager::class)->getPlug(), $plug);
     }
 
     #[TestDox('Merges the package configuration.')]
