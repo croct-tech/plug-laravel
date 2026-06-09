@@ -26,18 +26,18 @@
         "php": "^8.2",
         "ext-json": "*",
         "croct/plug-php": "dev-initial-version as 1.0.0",
-        "illuminate/contracts": "^10.0 || ^11.0",
-        "illuminate/cookie": "^10.0 || ^11.0",
-        "illuminate/http": "^10.0 || ^11.0",
-        "illuminate/routing": "^10.0 || ^11.0",
-        "illuminate/support": "^10.0 || ^11.0",
+        "illuminate/contracts": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/cookie": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/http": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/routing": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/support": "^10.0 || ^11.0 || ^12.0",
         "symfony/http-foundation": "^6.4 || ^7.0"
     },
     "require-dev": {
         "croct/coding-standard": "^0.4.5",
         "ergebnis/composer-normalize": "^2.28",
         "larastan/larastan": "^3.0",
-        "orchestra/testbench": "^9.0",
+        "orchestra/testbench": "^9.0 || ^10.0",
         "php-http/mock-client": "^1.6",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.2",
@@ -49,8 +49,8 @@
     },
     "repositories": [
         {
-            "type": "path",
-            "url": "../plug-php"
+            "type": "vcs",
+            "url": "https://github.com/croct-tech/plug-php"
         }
     ],
     "prefer-stable": true,
