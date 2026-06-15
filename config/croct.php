@@ -26,5 +26,7 @@ return [
         // First-party path that serves the SDK. Set to null to inject the CDN script URL instead.
         'path' => '/_croct/plug.js',
         'script_url' => \Croct\Plug\CroctScript::DEFAULT_SCRIPT_URL,
+        // How the loader is fetched: 'sync' (blocking, croct ready immediately), 'defer' or 'async'.
+        'mode' => 'defer',
     ],
 ];

@@ -8,6 +8,7 @@ use Croct\Plug\Exception\MalformedTokenException;
 use Croct\Plug\IdentityResolver;
 use Croct\Plug\Laravel\CroctManager;
 use Croct\Plug\Laravel\Http\CroctMiddleware;
+use Croct\Plug\LoadMode;
 use Croct\Plug\LocaleResolver;
 use Croct\Plug\Token;
 use Illuminate\Http\Request;
@@ -50,6 +51,21 @@ final class CroctMiddlewareTest extends TestCase
         );
 
         self::assertStringContainsString('</script></body>', (string) $response->getContent());
+    }
+
+    #[TestDox('Injects the loader using the configured mode.')]
+    public function testInjectsConfiguredMode(): void
+    {
+        $response = $this->dispatch(
+            $this->createMiddleware('head', mode: LoadMode::SYNC),
+            Request::create('/'),
+            new Response('<html><head></head><body></body></html>'),
+        );
+
+        $content = (string) $response->getContent();
+
+        self::assertStringContainsString('<script src="' . self::LOADER . '"></script>', $content);
+        self::assertStringNotContainsString('defer', $content);
     }
 
     #[TestDox('Does not inject when auto-injection is disabled.')]
@@ -132,7 +148,26 @@ final class CroctMiddlewareTest extends TestCase
             $response->headers->getCookies(),
         );
 
-        self::assertContains('ct.client_id', $names);
+        self::assertContains('ct_client_id', $names);
+    }
+
+    #[TestDox('Issues a token and marks the response private on a first visit.')]
+    public function testWritesCookiesWhenTokenReissued(): void
+    {
+        $response = $this->dispatch(
+            $this->createMiddleware('head'),
+            Request::create('/'),
+            new Response('<html><head></head><body></body></html>'),
+        );
+
+        self::assertTrue($response->headers->hasCacheControlDirective('private'));
+
+        $names = \array_map(
+            static fn (Cookie $cookie): string => $cookie->getName(),
+            $response->headers->getCookies(),
+        );
+
+        self::assertContains('ct_user_token', $names);
     }
 
     /**
@@ -169,19 +204,23 @@ final class CroctMiddlewareTest extends TestCase
         self::assertTrue(Token::parse(self::userTokenCookie($response))->isAnonymous());
     }
 
-    private function createMiddleware(string $placement, bool $autoInject = true): CroctMiddleware
-    {
+    private function createMiddleware(
+        string $placement,
+        bool $autoInject = true,
+        LoadMode $mode = LoadMode::DEFER,
+    ): CroctMiddleware {
         return new CroctMiddleware(
             $this->createManager(),
             $autoInject,
             self::LOADER,
             $placement,
+            $mode,
         );
     }
 
     private function createManager(?string $userToken = null, ?IdentityResolver $identity = null): CroctManager
     {
-        $cookies = $userToken === null ? [] : ['ct.user_token' => $userToken];
+        $cookies = $userToken === null ? [] : ['ct_user_token' => $userToken];
 
         $locale = $this->createMock(LocaleResolver::class);
         $locale->method('getLocale')->willReturn('en');
@@ -198,7 +237,7 @@ final class CroctMiddlewareTest extends TestCase
     private static function userTokenCookie(Response $response): string
     {
         foreach ($response->headers->getCookies() as $cookie) {
-            if ($cookie->getName() === 'ct.user_token') {
+            if ($cookie->getName() === 'ct_user_token') {
                 return (string) $cookie->getValue();
             }
         }

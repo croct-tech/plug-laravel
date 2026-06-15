@@ -15,6 +15,7 @@ use Croct\Plug\LocaleResolver;
 use Croct\Plug\Plug;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Blade;
 use Orchestra\Testbench\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\TestDox;
@@ -75,8 +76,8 @@ final class CroctServiceProviderTest extends TestCase
         $except = (new ReflectionProperty(EncryptCookies::class, 'neverEncrypt'))->getValue();
 
         self::assertIsArray($except);
-        self::assertContains('ct.client_id', $except);
-        self::assertContains('ct.user_token', $except);
+        self::assertContains('ct_client_id', $except);
+        self::assertContains('ct_user_token', $except);
     }
 
     #[TestDox('Binds the first-party script provider.')]
@@ -99,8 +100,37 @@ final class CroctServiceProviderTest extends TestCase
     #[TestDox('Injects the first-party path as the script source.')]
     public function testInjectsFirstPartyPath(): void
     {
+        $this->withValidCredentials();
+
         $this->get('/croct-test-page')
             ->assertSee('src="/_croct/plug.js"', false);
+    }
+
+    #[TestDox('Injects the loader using the configured mode.')]
+    public function testWiresConfiguredLoadMode(): void
+    {
+        $this->withValidCredentials();
+        $this->app->make('config')->set('croct.script.mode', 'async');
+
+        $this->get('/croct-test-page')
+            ->assertSee('src="/_croct/plug.js" async', false);
+    }
+
+    #[TestDox('Registers the croct Blade directive that wraps a snippet in the onCroctPlug queue.')]
+    public function testRegistersCroctBladeDirective(): void
+    {
+        $html = Blade::render("@croct\ncroct.track('linkOpened')\n@endcroct");
+
+        self::assertStringContainsString('window.onCroctPlug', $html);
+        self::assertStringContainsString('(function(croct){', $html);
+        self::assertStringContainsString("croct.track('linkOpened')", $html);
+    }
+
+    private function withValidCredentials(): void
+    {
+        $config = $this->app->make('config');
+        $config->set('croct.app_id', '7e9d59a9-e4b3-45d4-b1c7-48287f1e5e8a');
+        $config->set('croct.api_key', '11111111-2222-4333-8444-555555555555');
     }
 
     /**

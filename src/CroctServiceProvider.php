@@ -10,6 +10,7 @@ use Croct\Plug\CroctScriptProvider;
 use Croct\Plug\IdentityResolver;
 use Croct\Plug\Laravel\Http\CroctMiddleware;
 use Croct\Plug\Laravel\Http\CroctScriptController;
+use Croct\Plug\LoadMode;
 use Croct\Plug\LocaleResolver;
 use Croct\Plug\Plug;
 use GuzzleHttp\Client;
@@ -22,6 +23,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\Compilers\BladeCompiler;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -95,6 +97,7 @@ final class CroctServiceProvider extends ServiceProvider
                 (bool) $config->get('croct.script.auto_inject'),
                 self::resolveScriptSrc($config),
                 self::getString($config->get('croct.script.placement')),
+                LoadMode::tryFrom(self::getString($config->get('croct.script.mode'))) ?? LoadMode::DEFER,
             );
         });
     }
@@ -107,7 +110,10 @@ final class CroctServiceProvider extends ServiceProvider
         );
 
         // The client SDK reads these cookies, so Laravel must never encrypt them.
-        EncryptCookies::except(['ct.client_id', 'ct.user_token']);
+        EncryptCookies::except(['ct_client_id', 'ct_user_token']);
+
+        // The croct Blade directives are an optional integration, registered once Blade resolves.
+        $this->callAfterResolving('blade.compiler', self::registerBladeDirectives(...));
 
         $router = $this->app->make(Router::class);
         $router->pushMiddlewareToGroup('web', CroctMiddleware::class);
@@ -118,6 +124,25 @@ final class CroctServiceProvider extends ServiceProvider
         if ($path !== null) {
             $router->get($path, CroctScriptController::class);
         }
+    }
+
+    /**
+     * Registers the Blade directives for running snippets once the SDK is plugged.
+     *
+     * The croct/endcroct pair wraps a snippet in the onCroctPlug queue, taking an optional nonce
+     * expression for CSP.
+     */
+    private static function registerBladeDirectives(BladeCompiler $blade): void
+    {
+        $blade->directive('croct', static function (string $expression): string {
+            $nonce = $expression === '' ? 'null' : $expression;
+
+            return '<?php $__croctNonce = ' . $nonce . '; \ob_start(); ?>';
+        });
+
+        $blade->directive('endcroct', static function (): string {
+            return '<?php echo new \Croct\Plug\CroctCallback((string) \ob_get_clean(), $__croctNonce); ?>';
+        });
     }
 
     private static function resolveScriptSrc(Config $config): string

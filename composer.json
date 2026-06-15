@@ -49,6 +49,13 @@
     },
     "repositories": [
         {
+            "type": "path",
+            "url": "/Users/marcospassos/PhpstormProjects/plug-php",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
             "type": "vcs",
             "url": "https://github.com/croct-tech/plug-php"
         }

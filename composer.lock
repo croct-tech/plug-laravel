@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e07895105171435e5adff0c535dc182d",
+    "content-hash": "23ccfa3b3a111ffa20671a6df66e5378",
     "packages": [
         {
             "name": "brick/math",
@@ -138,20 +138,16 @@
         {
             "name": "croct/plug-php",
             "version": "dev-initial-version",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/croct-tech/plug-php.git",
-                "reference": "e22f328bae375f083040752c7953c46473702f3e"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/croct-tech/plug-php/zipball/e22f328bae375f083040752c7953c46473702f3e",
-                "reference": "e22f328bae375f083040752c7953c46473702f3e",
-                "shasum": ""
+                "type": "path",
+                "url": "/Users/marcospassos/PhpstormProjects/plug-php",
+                "reference": "eb9fb50f792460ffd2de04a576ae4eeee695b7ca"
             },
             "require": {
                 "composer-runtime-api": "^2.0",
+                "ext-hash": "*",
                 "ext-json": "*",
+                "ext-mbstring": "*",
                 "ext-openssl": "*",
                 "php": "^8.2",
                 "php-http/discovery": "^1.19",
@@ -159,11 +155,13 @@
                 "psr/http-factory": "^1.0",
                 "psr/http-message": "^1.1 || ^2.0",
                 "psr/log": "^2.0 || ^3.0",
-                "psr/simple-cache": "^1.0 || ^2.0 || ^3.0"
+                "psr/simple-cache": "^1.0 || ^2.0 || ^3.0",
+                "vlucas/phpdotenv": "^5.6"
             },
             "require-dev": {
                 "croct/coding-standard": "^0.4.5",
                 "ergebnis/composer-normalize": "^2.28",
+                "ext-simplexml": "*",
                 "guzzlehttp/guzzle": "^7.5",
                 "nyholm/psr7": "^1.8",
                 "php-http/mock-client": "^1.6",
@@ -174,7 +172,8 @@
                 "phpstan/phpstan-strict-rules": "^2.0",
                 "phpunit/phpunit": "^11.0",
                 "squizlabs/php_codesniffer": "^4.0",
-                "symfony/cache": "^6.4 || ^7.0"
+                "symfony/cache": "^6.4 || ^7.0",
+                "vimeo/psalm": "^5.26 || ^6.0"
             },
             "suggest": {
                 "guzzlehttp/guzzle": "A PSR-18 HTTP client used to talk to the Croct API (any PSR-18 client works).",
@@ -182,8 +181,19 @@
                 "symfony/http-client": "An alternative PSR-18 HTTP client."
             },
             "type": "library",
+            "extra": {
+                "phpstan": {
+                    "includes": [
+                        "extension.neon"
+                    ]
+                },
+                "psalm": {
+                    "pluginClass": "Croct\\Plug\\Psalm\\ContentStubPlugin"
+                }
+            },
             "autoload": {
                 "psr-4": {
+                    "Croct\\Content\\": "stubs/",
                     "Croct\\Plug\\": "src/"
                 }
             },
@@ -224,7 +234,10 @@
                 "issues": "https://github.com/croct-tech/plug-php/issues",
                 "source": "https://github.com/croct-tech/plug-php"
             },
-            "time": "2026-06-08T19:32:06+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
         },
         {
             "name": "dflydev/dot-access-data",

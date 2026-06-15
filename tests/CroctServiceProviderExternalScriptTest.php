@@ -45,7 +45,9 @@ final class CroctServiceProviderExternalScriptTest extends TestCase
     protected function defineEnvironment(mixed $app): void
     {
         $config = $app->make('config');
-        $config->set('croct.app_id', null);
+        // Valid credentials so the middleware can resolve the visitor token when the route is hit.
+        $config->set('croct.app_id', '7e9d59a9-e4b3-45d4-b1c7-48287f1e5e8a');
+        $config->set('croct.api_key', '11111111-2222-4333-8444-555555555555');
         $config->set('croct.script.path', null);
     }
 

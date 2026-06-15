@@ -8,6 +8,7 @@ use Closure;
 use Croct\Plug\Cookie;
 use Croct\Plug\CroctScript;
 use Croct\Plug\Laravel\CroctManager;
+use Croct\Plug\LoadMode;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
@@ -31,16 +32,20 @@ final class CroctMiddleware
 
     private string $placement;
 
+    private LoadMode $mode;
+
     public function __construct(
         CroctManager $manager,
         bool $autoInject,
         string $scriptSrc,
         string $placement,
+        LoadMode $mode = LoadMode::DEFER,
     ) {
         $this->manager = $manager;
         $this->autoInject = $autoInject;
         $this->scriptSrc = $scriptSrc;
         $this->placement = $placement;
+        $this->mode = $mode;
     }
 
     /**
@@ -54,12 +59,11 @@ final class CroctMiddleware
             $this->injectScript($request, $response);
         }
 
-        // Eagerly reconcile the visitor identity: when the logged-in user diverged from the
-        // cookie token, this re-identifies and flags the request personalized, so the cookies
-        // are written and the response goes private below, like a content fetch.
-        $this->manager->reconcile();
+        // Reconcile the visitor token: it issues or refreshes the token through the session and
+        // reports whether it changed, so the new cookie is written and the response goes private.
+        $reissued = $this->manager->reconcile();
 
-        if ($this->manager->isPersonalized()) {
+        if ($this->manager->isPersonalized() || $reissued) {
             foreach ($this->manager->getResponseCookies() as $cookie) {
                 $response->headers->setCookie(self::createCookie($cookie));
             }
@@ -93,7 +97,7 @@ final class CroctMiddleware
             return;
         }
 
-        $script = (string) new CroctScript($this->scriptSrc, $this->manager->getPlugOptions());
+        $script = (string) new CroctScript($this->scriptSrc, $this->manager->getPlugOptions(), null, $this->mode);
 
         $response->setContent(\substr_replace($content, $script, $position, 0));
     }

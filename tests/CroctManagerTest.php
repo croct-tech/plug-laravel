@@ -51,51 +51,65 @@ final class CroctManagerTest extends TestCase
     /**
      * @throws MalformedTokenException
      */
-    #[TestDox('Identifies the visitor when the authenticated user diverges from the token.')]
+    #[TestDox('Issues a token for the authenticated user and reports the change.')]
     public function testReconcilesIdentityOnLogin(): void
     {
         $manager = $this->createManager(identity: $this->identity('alice'));
 
-        $manager->reconcile();
-
-        self::assertTrue($manager->isPersonalized());
+        self::assertTrue($manager->reconcile());
         self::assertTrue(Token::parse(self::userTokenCookie($manager))->isSubject('alice'));
     }
 
     /**
      * @throws MalformedTokenException
      */
-    #[TestDox('Anonymizes the visitor after the user logs out.')]
+    #[TestDox('Re-issues anonymously after the user logs out and reports the change.')]
     public function testReconcilesIdentityOnLogout(): void
     {
         $token = Token::issue(appId: self::APP_ID, subject: 'alice', now: 1000)->toString();
         $manager = $this->createManager(userToken: $token, identity: $this->identity(null));
 
-        $manager->reconcile();
-
-        self::assertTrue($manager->isPersonalized());
+        self::assertTrue($manager->reconcile());
         self::assertTrue(Token::parse(self::userTokenCookie($manager))->isAnonymous());
     }
 
-    #[TestDox('Leaves a matching visitor untouched, keeping the response cacheable.')]
-    public function testSkipsReconcileWhenMatching(): void
+    #[TestDox('Keeps a matching token and reports no change.')]
+    public function testKeepsMatchingToken(): void
     {
         $token = Token::issue(appId: self::APP_ID, subject: 'alice', now: 1000)->toString();
         $manager = $this->createManager(userToken: $token, identity: $this->identity('alice'));
 
-        $manager->reconcile();
-
-        self::assertFalse($manager->isPersonalized());
+        self::assertFalse($manager->reconcile());
     }
 
-    #[TestDox('Leaves the session untouched when no identity resolver is configured.')]
-    public function testSkipsReconcileWithoutIdentity(): void
+    /**
+     * @throws MalformedTokenException
+     */
+    #[TestDox('Issues an anonymous token when none exists, even without an identity resolver.')]
+    public function testIssuesTokenWithoutIdentity(): void
     {
         $manager = $this->createManager();
 
-        $manager->reconcile();
+        self::assertTrue($manager->reconcile());
+        self::assertTrue(Token::parse(self::userTokenCookie($manager))->isAnonymous());
+    }
 
-        self::assertFalse($manager->isPersonalized());
+    #[TestDox('Keeps a valid anonymous token without an identity resolver.')]
+    public function testKeepsValidTokenWithoutIdentity(): void
+    {
+        $token = Token::issue(appId: self::APP_ID, now: 1000)->toString();
+        $manager = $this->createManager(userToken: $token);
+
+        self::assertFalse($manager->reconcile());
+    }
+
+    #[TestDox('Re-issues an expired token and reports the change.')]
+    public function testReissuesExpiredToken(): void
+    {
+        $token = Token::issue(appId: self::APP_ID, now: 1000)->withDuration(3600, 1000)->toString();
+        $manager = $this->createManager(userToken: $token);
+
+        self::assertTrue($manager->reconcile());
     }
 
     #[TestDox('Builds the Plug with a configured locale that overrides detection.')]
@@ -137,7 +151,7 @@ final class CroctManagerTest extends TestCase
         ?string $userToken = null,
         ?IdentityResolver $identity = null,
     ): CroctManager {
-        $cookies = $userToken === null ? [] : ['ct.user_token' => $userToken];
+        $cookies = $userToken === null ? [] : ['ct_user_token' => $userToken];
 
         $request = Request::create(
             $url,
@@ -171,7 +185,7 @@ final class CroctManagerTest extends TestCase
     private static function userTokenCookie(CroctManager $manager): string
     {
         foreach ($manager->getResponseCookies() as $cookie) {
-            if ($cookie->getName() === 'ct.user_token') {
+            if ($cookie->getName() === 'ct_user_token') {
                 return $cookie->getValue();
             }
         }

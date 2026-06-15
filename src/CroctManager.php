@@ -25,6 +25,11 @@ use Psr\Log\LoggerInterface as Logger;
  */
 final class CroctManager
 {
+    /**
+     * Request attribute flagging that the response varies by visitor.
+     */
+    public const PERSONALIZED_ATTRIBUTE = '_croct_personalized';
+
     private Request $request;
 
     private LocaleResolver $locale;
@@ -56,8 +61,6 @@ final class CroctManager
     private ?Plug $plug = null;
 
     private ?CookieStorage $storage = null;
-
-    private bool $personalized = false;
 
     public function __construct(
         Request $request,
@@ -98,7 +101,7 @@ final class CroctManager
 
     public function isPersonalized(): bool
     {
-        return $this->personalized;
+        return $this->request->attributes->get(self::PERSONALIZED_ATTRIBUTE) === true;
     }
 
     /**
@@ -110,35 +113,18 @@ final class CroctManager
     }
 
     /**
-     * Reconciles the visitor token with the authenticated user.
+     * Resolves the visitor token and reports whether it changed.
      *
-     * When the logged-in user no longer matches the cookie token, the visitor is re-identified
-     * through the session. That flags the request as varying, so the new cookie is written and
-     * the response goes private. A matching or anonymous visitor is left untouched, keeping the
-     * response shared-cacheable, the same way plug-next and plug-nuxt reconcile.
+     * Resolving issues or refreshes the token through the session when it is missing, expired, or
+     * out of sync with the authenticated user, saving it back to the storage. Returns true when the
+     * token was (re)issued, so the caller writes the new cookie and keeps the response private.
      */
-    public function reconcile(): void
+    public function reconcile(): bool
     {
-        if ($this->identity === null) {
-            return;
-        }
-
         $stored = $this->getStorage()->getUserToken();
-        $userId = $this->identity->getUserId();
+        $resolved = $this->getPlug()->getUserToken();
 
-        $matches = $userId === null
-            ? ($stored?->isAnonymous() ?? true)
-            : ($stored?->isSubject($userId) ?? false);
-
-        if ($matches) {
-            return;
-        }
-
-        if ($userId === null) {
-            $this->getPlug()->anonymize();
-        } else {
-            $this->getPlug()->identify($userId);
-        }
+        return $stored === null || !$stored->equals($resolved);
     }
 
     /**
@@ -196,7 +182,7 @@ final class CroctManager
         );
 
         return new VaryingResponseObserver($croct, function (): void {
-            $this->personalized = true;
+            $this->request->attributes->set(self::PERSONALIZED_ATTRIBUTE, true);
         });
     }
 
