@@ -25,7 +25,7 @@
     "require": {
         "php": "^8.2",
         "ext-json": "*",
-        "croct/plug-php": "dev-initial-version as 1.0.0",
+        "croct/plug-php": "0.1.0",
         "illuminate/contracts": "^10.0 || ^11.0 || ^12.0 || ^13.0",
         "illuminate/cookie": "^10.0 || ^11.0 || ^12.0 || ^13.0",
         "illuminate/http": "^10.0 || ^11.0 || ^12.0 || ^13.0",
@@ -47,19 +47,6 @@
         "phpunit/phpunit": "^11.5",
         "squizlabs/php_codesniffer": "^4.0"
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "/Users/marcospassos/PhpstormProjects/plug-php",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/croct-tech/plug-php"
-        }
-    ],
     "prefer-stable": true,
     "autoload": {
         "psr-4": {

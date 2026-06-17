@@ -13,7 +13,7 @@
   Bring dynamic, personalized content natively into your Laravel applications.
 </p>
 <div align="center">
-    <strong>📘 <a href="https://docs.croct.com/reference/sdk/laravel/installation">Quick start &rarr;</a></strong>
+    <strong>📘 <a href="https://docs.croct.com/reference/sdk/laravel/integration">Quick start &rarr;</a></strong>
 </div>
 <br/>
 <p align="center">
@@ -50,11 +50,11 @@ Optionally, publish the configuration file to customize the package:
 php artisan vendor:publish --tag=croct-config
 ```
 
-See our [quick start guide](https://docs.croct.com/reference/sdk/laravel/installation) for more details.
+See our [quick start guide](https://docs.croct.com/reference/sdk/laravel/integration) for more details.
 
 ## Documentation
 
-Visit our [official documentation](https://docs.croct.com/reference/sdk/laravel/installation).
+Visit our [official documentation](https://docs.croct.com/reference/sdk/laravel/integration).
 
 ## Support
 
