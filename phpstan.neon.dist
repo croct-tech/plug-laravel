@@ -10,14 +10,28 @@ parameters:
         uncheckedExceptionClasses:
             - LogicException
             - ArithmeticError
+            - JsonException
+            - Symfony\Component\HttpFoundation\Exception\BadRequestException
+            - Illuminate\Contracts\Container\BindingResolutionException
+            - Psr\SimpleCache\InvalidArgumentException
         check:
             missingCheckedExceptionInThrows: true
             tooWideThrowType: true
     checkTooWideReturnTypesInProtectedAndPublicMethods: true
     checkUninitializedProperties: true
     checkMissingCallableSignature: true
-    checkGenericClassInNonGenericObjectType: true
     ignoreErrors:
         -
             message: '#.+::test.+\(\) throws checked exception .+ but it''s missing from the PHPDoc @throws tag#'
             path: %rootDir%/../../../tests
+            reportUnmatched: false
+        # Testbench types its app property as nullable, and larastan resolves container bindings to
+        # their concrete type, so the binding assertions in the provider test look redundant to it.
+        -
+            identifier: method.nonObject
+            path: %rootDir%/../../../tests
+            reportUnmatched: false
+        -
+            identifier: staticMethod.alreadyNarrowedType
+            path: %rootDir%/../../../tests
+            reportUnmatched: false
