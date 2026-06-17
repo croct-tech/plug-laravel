@@ -35,21 +35,6 @@ Run this command to install the package:
 composer require croct/plug-laravel
 ```
 
-Then set your credentials in the `.env` file:
-
-```dotenv
-CROCT_APP_ID=<APP_ID>
-CROCT_API_KEY=<API_KEY>
-```
-
-The package auto-registers through Laravel package discovery, so there is no need to wire up the service provider or middleware manually.
-
-Optionally, publish the configuration file to customize the package:
-
-```sh
-php artisan vendor:publish --tag=croct-config
-```
-
 See our [quick start guide](https://docs.croct.com/reference/sdk/laravel/integration) for more details.
 
 ## Documentation
