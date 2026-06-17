@@ -19,6 +19,10 @@ return [
         'secure' => true,
         'same_site' => 'none',
     ],
+    'storyblok' => [
+        // Serves Croct content inside Storyblok stories when a Storyblok Stories API is bound.
+        'enabled' => true,
+    ],
     'script' => [
         // Injects the client-side SDK bootstrap into HTML responses.
         'auto_inject' => true,

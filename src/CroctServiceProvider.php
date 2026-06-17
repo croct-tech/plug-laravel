@@ -35,6 +35,16 @@ use Psr\Log\LoggerInterface;
  */
 final class CroctServiceProvider extends ServiceProvider
 {
+    /**
+     * The Storyblok Stories API contract, decorated when the optional integration is present.
+     */
+    private const STORYBLOK_STORIES_API = 'Storyblok\\Api\\StoriesApiInterface';
+
+    /**
+     * The Croct decorator shipped by the optional croct/plug-storyblok package.
+     */
+    private const CROCT_STORIES_API = 'Croct\\Plug\\Storyblok\\CroctStoriesApi';
+
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/croct.php', 'croct');
@@ -124,6 +134,46 @@ final class CroctServiceProvider extends ServiceProvider
         if ($path !== null) {
             $router->get($path, CroctScriptController::class);
         }
+
+        $this->registerStoryblokIntegration();
+    }
+
+    /**
+     * Decorates the Storyblok Stories API so Croct serves personalized content inside stories.
+     *
+     * The decorator ships in the optional croct/plug-storyblok package and the Stories API is bound
+     * by the application (or a Storyblok package); the classes are referenced by name so this
+     * package keeps no dependency on either. When both are present the integration self-activates,
+     * leaving the binding untouched otherwise.
+     */
+    private function registerStoryblokIntegration(): void
+    {
+        if ($this->app->make(Config::class)->get('croct.storyblok.enabled') !== true) {
+            return;
+        }
+
+        if (!\class_exists(self::CROCT_STORIES_API) || !$this->app->bound(self::STORYBLOK_STORIES_API)) {
+            return;
+        }
+
+        $this->app->extend(
+            self::STORYBLOK_STORIES_API,
+            fn (object $stories): object => self::decorateStoriesApi(
+                self::CROCT_STORIES_API,
+                $stories,
+                $this->app->make(Plug::class),
+            ),
+        );
+    }
+
+    /**
+     * Builds the Croct Stories API decorator around the given Storyblok Stories API.
+     *
+     * The class is passed by name so the package keeps no dependency on croct/plug-storyblok.
+     */
+    private static function decorateStoriesApi(string $decorator, object $stories, Plug $plug): object
+    {
+        return new $decorator($stories, $plug);
     }
 
     /**

@@ -121,8 +121,8 @@ final class CroctServiceProviderTest extends TestCase
     {
         $html = Blade::render("@croct\ncroct.track('linkOpened')\n@endcroct");
 
-        self::assertStringContainsString('window.onCroctPlug', $html);
-        self::assertStringContainsString('(function(croct){', $html);
+        self::assertStringContainsString('window.onCroctPlug=window.onCroctPlug||', $html);
+        self::assertStringContainsString('(croct=>{', $html);
         self::assertStringContainsString("croct.track('linkOpened')", $html);
     }
 
