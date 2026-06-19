@@ -28,11 +28,18 @@ final class CroctManagerTest extends TestCase
     #[TestDox('Exposes the visitor-independent browser plug options.')]
     public function testExposesPlugOptions(): void
     {
-        $options = $this->createManager()->getPlugOptions();
+        $options = $this->createManager()->getPlug()->getPlugOptions();
 
         self::assertSame(self::APP_ID, $options['appId']);
         self::assertTrue($options['disableCidMirroring']);
         self::assertArrayHasKey('cookie', $options);
+        self::assertArrayNotHasKey('debug', $options);
+    }
+
+    #[TestDox('Forwards the debug flag to the browser plug options when enabled.')]
+    public function testForwardsDebugToPlugOptions(): void
+    {
+        self::assertTrue($this->createManager(debug: true)->getPlug()->getPlugOptions()['debug'] ?? null);
     }
 
     #[TestDox('Flags the request as personalized when the visitor session is used.')]
@@ -150,6 +157,7 @@ final class CroctManagerTest extends TestCase
         string $url = 'https://example.com/',
         ?string $userToken = null,
         ?IdentityResolver $identity = null,
+        bool $debug = false,
     ): CroctManager {
         $cookies = $userToken === null ? [] : ['ct_user_token' => $userToken];
 
@@ -170,6 +178,7 @@ final class CroctManagerTest extends TestCase
             null,
             $localeEnabled,
             $defaultLocale,
+            debug: $debug,
             identity: $identity,
         );
     }

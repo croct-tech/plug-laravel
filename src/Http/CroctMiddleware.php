@@ -97,7 +97,12 @@ final class CroctMiddleware
             return;
         }
 
-        $script = (string) new CroctScript($this->scriptSrc, $this->manager->getPlugOptions(), null, $this->mode);
+        $script = (string) new CroctScript(
+            $this->scriptSrc,
+            $this->manager->getPlug()->getPlugOptions(),
+            null,
+            $this->mode,
+        );
 
         $response->setContent(\substr_replace($content, $script, $position, 0));
     }

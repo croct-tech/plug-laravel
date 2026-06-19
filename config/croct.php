@@ -6,6 +6,8 @@ return [
     'app_id' => env('CROCT_APP_ID'),
     'api_key' => env('CROCT_API_KEY'),
     'base_endpoint_url' => env('CROCT_BASE_ENDPOINT_URL'),
+    // Forwards a debug flag to the browser SDK. Defaults to the application's debug mode.
+    'debug' => env('CROCT_DEBUG'),
     // Lifetime in seconds of the issued visitor tokens.
     'token_duration' => (int) env('CROCT_TOKEN_DURATION', \Croct\Plug\Croct::DEFAULT_TOKEN_DURATION),
     'locale' => [
