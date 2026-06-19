@@ -54,6 +54,8 @@ final class CroctManager
 
     private ?Logger $logger;
 
+    private bool $debug;
+
     private int $tokenDuration;
 
     private ?IdentityResolver $identity;
@@ -75,6 +77,7 @@ final class CroctManager
         string $cookieSameSite = 'none',
         ?ContentProvider $contentProvider = null,
         ?Logger $logger = null,
+        bool $debug = false,
         int $tokenDuration = Croct::DEFAULT_TOKEN_DURATION,
         ?IdentityResolver $identity = null,
     ) {
@@ -90,6 +93,7 @@ final class CroctManager
         $this->cookieSameSite = $cookieSameSite;
         $this->contentProvider = $contentProvider;
         $this->logger = $logger;
+        $this->debug = $debug;
         $this->tokenDuration = $tokenDuration;
         $this->identity = $identity;
     }
@@ -127,20 +131,6 @@ final class CroctManager
         return $stored === null || !$stored->equals($resolved);
     }
 
-    /**
-     * Returns the visitor-independent options for bootstrapping the client-side SDK.
-     *
-     * @return array<string, mixed>
-     */
-    public function getPlugOptions(): array
-    {
-        return [
-            'appId' => $this->appId,
-            'disableCidMirroring' => true,
-            'cookie' => $this->createCookieConfiguration()->toBrowserCookies(),
-        ];
-    }
-
     private function getStorage(): CookieStorage
     {
         return $this->storage ??= CookieStorage::fromArray(
@@ -176,6 +166,7 @@ final class CroctManager
             identity: $this->identity,
             baseEndpointUrl: $this->baseEndpointUrl,
             tokenDuration: $this->tokenDuration,
+            debug: $this->debug,
             contentProvider: $this->contentProvider,
             context: $context,
             logger: $this->logger,

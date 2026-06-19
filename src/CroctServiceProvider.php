@@ -77,6 +77,7 @@ final class CroctServiceProvider extends ServiceProvider
                 self::getString($config->get('croct.cookie.same_site')),
                 $app->bound(ContentProvider::class) ? $app->make(ContentProvider::class) : null,
                 $app->make(LoggerInterface::class),
+                (bool) ($config->get('croct.debug') ?? $config->get('app.debug')),
                 self::getInt($config->get('croct.token_duration'), Croct::DEFAULT_TOKEN_DURATION),
                 $app->make(IdentityResolver::class),
             );
